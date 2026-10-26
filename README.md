@@ -27,6 +27,7 @@ Tests use installed Microsoft Edge through Playwright. To test a deployment, set
 
 - 3-photo and 4-photo strips, 2×2 grid, and Polaroid.
 - Off / 3 / 5 / 10-second timers, automatic capture, cancel/resume, camera switching, mirroring, optional shutter sound.
+- Adjustable screen fill light with warm, neutral, and cool tones for dark rooms. It lights the subject during the preview and countdown without drawing an overlay into the saved photo.
 - 20 looks (Original plus 19 filters), identical in live view, thumbnails, the print, and export. The compact filter list scrolls and supports keyboard selection.
 - 18 camera effects: film grain, vignette, light leak, soft glow, prism, mirror split, pixelation, VHS lines, kaleidoscope, mirror stack, fisheye, tunnel, ripple, motion trail, RGB split, halftone, posterize, and solarize. Combine one effect with any color filter, adjust strength from 0–100%, or reset both. Effects also work on uploads and existing photos. The effects list remains compact and scrollable on desktop and mobile.
 - Individual retakes or file replacements; multi-file upload with type, size, and decoding checks.

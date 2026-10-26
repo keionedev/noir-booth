@@ -138,6 +138,42 @@ test('capture counts, visible countdown, live mirror, retake, switch and close t
   expect(await page.evaluate(() => (window as any).__qa.streams.every((s: MediaStream) => s.getTracks().every(t => t.readyState === 'ended')))).toBe(true);
 });
 
+test('screen fill light brightens the preview without moving controls or entering the saved photo', async ({ page }) => {
+  await fakeCamera(page); await page.goto('/');
+  const lightButton = page.getByRole('button', { name: 'Screen fill light', exact: true });
+  await expect(lightButton).toBeDisabled();
+  await page.getByRole('button', { name: 'Timer off', exact: true }).click();
+  await page.getByRole('button', { name: 'Enable camera', exact: true }).click();
+  await expect(page.getByText('Live view', { exact: true })).toBeVisible();
+  const beforeStage = await page.locator('.viewfinder').boundingBox();
+  const beforeShutter = await page.locator('.shutter').boundingBox();
+  const livePixel = await page.locator('.live-canvas').evaluate((canvas: HTMLCanvasElement) => Array.from(canvas.getContext('2d')!.getImageData(150, 150, 1, 1).data));
+  await lightButton.click();
+  await expect(lightButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('fill-light')).toBeVisible();
+  await page.getByLabel('Brightness').fill('100');
+  await page.getByRole('button', { name: 'Warm', exact: true }).click();
+  await expect(page.getByTestId('fill-light')).toHaveAttribute('data-tone', 'warm');
+  await expect(page.getByTestId('fill-light')).toHaveAttribute('data-level', '100');
+  expect(await page.locator('.viewfinder').boundingBox()).toEqual(beforeStage);
+  expect(await page.locator('.shutter').boundingBox()).toEqual(beforeShutter);
+  await page.screenshot({ path: screenshotPath('fill-light-desktop'), fullPage: false });
+  await page.getByRole('button', { name: 'Start photo session', exact: true }).click();
+  await expect(page.getByTestId('fill-light')).toBeVisible();
+  await expect(page.getByLabel('Fill light controls')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Download photo', exact: true })).toBeEnabled();
+  const capturedPixel = await compositionPixel(page);
+  expect(Math.max(...capturedPixel.map((value, index) => Math.abs(value - livePixel[index])))).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByTestId('fill-light')).toBeVisible();
+  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: screenshotPath('fill-light-mobile'), fullPage: false });
+  await page.getByRole('button', { name: 'Close camera', exact: true }).click();
+  await expect(page.getByTestId('fill-light')).toHaveCount(0);
+  await expect(lightButton).toBeDisabled();
+});
+
 test('cancel countdown keeps partial photos and resumes only empty slots', async ({ page }) => {
   await fakeCamera(page); await page.goto('/');
   await page.getByRole('button', { name: 'Timer off', exact: true }).click();

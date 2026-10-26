@@ -1,5 +1,5 @@
-import { type RefObject } from 'react';
-import { Camera, CameraOff, FlipHorizontal2, LoaderCircle, SwitchCamera, Upload, X } from 'lucide-react';
+import { useState, type CSSProperties, type RefObject } from 'react';
+import { Camera, CameraOff, FlipHorizontal2, Lightbulb, LoaderCircle, SwitchCamera, Upload, X } from 'lucide-react';
 import { type FilterId } from '../lib/photobooth';
 import { effects, type EffectSettings } from '../lib/effects';
 import { useLivePreview } from '../hooks/useLivePreview';
@@ -12,8 +12,24 @@ interface Props {
   onEnable: () => void; onClose: () => void; onSwitch: () => void; onMirror: () => void;
   onUpload: () => void; onCapture: () => void; onCancel: () => void; onClearRetake: () => void;
 }
+
+const lightTones = {
+  warm: { label: 'Warm', color: '#ffe6bd' },
+  neutral: { label: 'Neutral', color: '#fffaf0' },
+  cool: { label: 'Cool', color: '#dceeff' },
+} as const;
+
+type LightTone = keyof typeof lightTones;
+
 export function CameraStage(p: Props) {
   const { canvasRef, renderError } = useLivePreview(p.videoRef, p.status === 'ready', p.ratio, p.mirrored, p.filter, p.effect);
+  const [fillLight, setFillLight] = useState(false);
+  const [lightLevel, setLightLevel] = useState(70);
+  const [lightTone, setLightTone] = useState<LightTone>('neutral');
+  const lightStyle = {
+    '--fill-light-color': lightTones[lightTone].color,
+    '--fill-light-opacity': String(.28 + lightLevel * .0072),
+  } as CSSProperties;
 
   return <section className="camera-column" aria-label="Camera workspace">
     <div className="intro"><h1>Make a moment<span>.</span></h1><p>Pick your frame. Strike a pose. Keep it.</p></div>
@@ -21,6 +37,7 @@ export function CameraStage(p: Props) {
       <div className={`viewfinder ${p.status === 'ready' ? 'is-live' : ''}`}>
         <video ref={p.videoRef} autoPlay playsInline muted className="source-video" aria-hidden="true" />
         <canvas ref={canvasRef} className="live-canvas" style={{ aspectRatio: p.ratio }} aria-label="Live camera preview" hidden={p.status !== 'ready'} />
+        {p.status === 'ready' && fillLight && <div className="fill-light-frame" style={lightStyle} data-testid="fill-light" data-tone={lightTone} data-level={lightLevel} aria-hidden="true" />}
         <div className="viewfinder-corners" aria-hidden="true"><i /><i /><i /><i /></div>
         {p.status === 'ready' && p.effect.id !== 'none' && <span className="effect-badge">{effects.find(item => item.id === p.effect.id)?.name} · {p.effect.amount}%</span>}
         {p.status !== 'ready' && <div className="camera-empty">
@@ -37,11 +54,18 @@ export function CameraStage(p: Props) {
       <div className="camera-toolbar">
         <span className="camera-status">{p.status === 'ready' ? <span className="live-dot" /> : <CameraOff size={14} />}<span>{p.status === 'ready' ? 'Live view' : p.status === 'loading' ? 'Connecting' : 'Camera off'}</span></span>
         <div className="flex items-center gap-1">
+          <button className="toolbar-button fill-light-button" onClick={() => setFillLight(value => !value)} aria-label="Screen fill light" aria-pressed={fillLight} aria-expanded={fillLight && p.status === 'ready'} aria-controls="fill-light-controls" disabled={p.status !== 'ready' || p.busy} title="Use the screen as a soft light"><Lightbulb size={17} /><span>Light</span></button>
           <button className="toolbar-button" onClick={p.onMirror} aria-label="Mirror camera" aria-pressed={p.mirrored} disabled={p.busy} title="Mirror camera"><FlipHorizontal2 size={17} /><span>Mirror</span></button>
           <button className="toolbar-button" onClick={p.onSwitch} aria-label="Switch camera" disabled={!p.canSwitch || p.status !== 'ready' || p.busy} title={p.canSwitch ? 'Switch camera' : 'A second camera is not available'}><SwitchCamera size={18} /></button>
           <button className="toolbar-button" onClick={p.onClose} aria-label="Close camera" disabled={p.status === 'off'} title="Close camera"><X size={18} /></button>
         </div>
       </div>
+      {p.status === 'ready' && fillLight && !p.capturing && <div className="fill-light-panel" id="fill-light-controls" aria-label="Fill light controls">
+        <div className="fill-light-heading"><strong>Screen fill</strong><span>Preview only</span></div>
+        <label className="range-label" htmlFor="fill-light-level">Brightness <span>{lightLevel}%</span></label>
+        <input id="fill-light-level" type="range" min="20" max="100" step="5" value={lightLevel} onChange={event => setLightLevel(+event.target.value)} />
+        <div className="light-tone-options" role="group" aria-label="Fill light tone">{Object.entries(lightTones).map(([id, tone]) => <button key={id} onClick={() => setLightTone(id as LightTone)} aria-pressed={lightTone === id}><i style={{ background: tone.color }} aria-hidden="true" />{tone.label}</button>)}</div>
+      </div>}
     </div>
     <div className="capture-controls">
       <div className="capture-caption">
